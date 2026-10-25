@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Phone UI - PC</title>
+    <style>
+        /* ===== CSS CƠ BẢN ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: url('https://files.catbox.moe/ak3tvt.gif') no-repeat center center fixed;
+            background-size: cover;
+            background-color: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* Lớp phủ mờ cho toàn bộ màn hình PC để làm nổi bật UI */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+
+        /* ===== OVERLAY THÔNG BÁO ===== */
+        #hologram-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #hologram-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .digital-matrix {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: repeating-linear-gradient(45deg, rgba(0, 255, 255, 0.05), rgba(0, 255, 255, 0.05) 1px, transparent 1px, transparent 10px),
+                              repeating-linear-gradient(-45deg, rgba(0, 255, 255, 0.05), rgba(0, 255, 255, 0.05) 1px, transparent 1px, transparent 10px);
+            animation: matrix-scan 20s linear infinite;
+        }
+
+        @keyframes matrix-scan {
+            0% { background-position: 0 0; }
+            100% { background-position: 1000px 1000px; }
+        }
+
+        .hologram-board {
+            position: relative;
+            width: 90%; max-width: 600px; padding: 40px;
+            background: rgba(10, 0, 20, 0.9);
+            border: 2px solid #00ffff;
+            border-image: linear-gradient(45deg, #ff00ff, #00ffff) 1;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.7);
+            border-radius: 15px; text-align: center; color: #fff;
+            transform: scale(0.8) translateY(-50px); opacity: 0;
+            transition: all 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        #hologram-overlay.visible .hologram-board {
+            transform: scale(1) translateY(0); opacity: 1;
+        }
+
+        .hologram-board::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: scan-line 3s linear infinite;
+        }
+
+        @keyframes scan-line {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .hologram-board h1 {
+            font-family: 'Orbitron', sans-serif; font-size: 2.5em; color: #00ffff;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #ff00ff; margin-bottom: 15px; text-transform: uppercase;
+        }
+
+        .hologram-board p { font-size: 1.2em; color: #d0d0d0; margin-bottom: 30px; }
+
+        .button-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .top-buttons { display: flex; justify-content: center; gap: 15px; width: 100%; }
+
+        .action-button {
+            padding: 12px 25px; border: 2px solid; border-radius: 5px; cursor: pointer;
+            font-weight: 600; text-transform: uppercase; text-decoration: none; color: #fff;
+            background: none; transition: all 0.3s ease;
+        }
+
+        .small-button { flex: 1; max-width: 200px; }
+        .large-button { width: calc(100% - 30px); max-width: 415px; padding: 15px 30px; }
+
+        .action-button:hover { transform: translateY(-3px); filter: brightness(1.2); box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2); }
+        .btn-know { border-color: #00ff00; color: #00ff00; }
+        .btn-know:hover { background-color: rgba(0, 255, 0, 0.1); box-shadow: 0 0 20px #00ff00; }
+        .btn-guide { border-color: #ffc107; color: #ffc107; }
+        .btn-guide:hover { background-color: rgba(255, 193, 7, 0.1); box-shadow: 0 0 20px #ffc107; }
+        .btn-join { border-color: #007bff; color: #007bff; }
+        .btn-join:hover { background-color: rgba(0, 123, 255, 0.1); box-shadow: 0 0 20px #007bff; }
+
+        /* ===== GIAO DIỆN PC ===== */
+        .pc-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Nút mũi tên điều hướng */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            font-size: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 25px #00ffff;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .nav-btn:active { transform: translateY(-50%) scale(0.95); }
+
+        .nav-btn.left { left: 20px; }
+        .nav-btn.right { right: 20px; }
+
+        /* Thanh cuộn chứa các thiết bị */
+        .container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            gap: 40px;
+            padding: 50px;
+            overflow-y: hidden;
+            width: 90%;
+            /* Ẩn thanh cuộn */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .container::-webkit-scrollbar { display: none; }
+
+        /* Card thiết bị */
+        .screen {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 320px;
+            height: 560px;
+            flex: none;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            scroll-snap-align: center;
+            padding: 15px;
+            text-align: center;
+            position: relative; 
+            background: url('https://files.catbox.moe/gl1fp5.gif') no-repeat center center;
+            background-size: cover;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            will-change: transform;
+            transform-origin: center center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .screen.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            border-color: #00ffff;
+            z-index: 10;
+        }
+
+        .header {
+            background-color: #FF69B4; color: #fff; padding: 8px 15px;
+            border-radius: 15px; text-align: center; font-size: 14px; font-weight: bold;
+            position: absolute; top: 10px; width: auto;
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+        }
+
+        .content {
+            flex-grow: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; width: 100%;
+        }
+
+        .image {
+            width: 100px; height: 100px; background-color: #fff;
+            border-radius: 20px; overflow: hidden; display: flex;
+            justify-content: center; align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .image img { width: 100%; height: 100%; object-fit: cover; }
+
+        .button {
+            background-color: #FF69B4; color: white; padding: 10px 25px;
+            border-radius: 15px; text-align: center; font-size: 14px;
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+            margin-top: 20px; box-shadow: 0 0 10px rgba(255, 105, 180, 0.4);
+        }
+
+        .button:hover {
+            background-color: #ff4da6;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Thông báo -->
+    <div id="hologram-overlay">
+        <div class="digital-matrix"></div>
+        <div class="hologram-board">
+            <h1>Hệ Thống Thông Báo</h1>
+            <p>Bạn Đã Biết Cách Xài Chưa?</p>
+            <div class="button-group">
+                <div class="top-buttons">
+                   <button class="action-button btn-know small-button" onclick="hideNotification()">Đã Biết</button>
+                    <a href="https://www.youtube.com/@contraucloudphone" target="_blank" class="action-button btn-guide small-button">Hướng Dẫn</a>
+                </div>
+                <a href="https://notevn.com/share/j6ap4u8y" target="_blank" class="action-button btn-join large-button">Tham Gia Nhóm Zalo</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giao diện chính PC -->
+    <div class="pc-wrapper">
+        <!-- Nút qua trái -->
+        <button class="nav-btn left" onclick="scrollLeft()">❮</button>
+
+        <!-- Danh sách Game -->
+        <div class="container" id="gameContainer">
+            <!-- CARD 1 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN App Launcher V3</div>
+                <div class="content">
+                    <div class="image"><img src="https://cdn.now.gg/assets-opt/_next/image?url=https%3A%2F%2Fcdn.now.gg%2Fassets-opt%2F_next%2Fimage%3Furl%3Dhttps%253A%252F%252Fcdn.now.gg%252Fapps-content%252Fcom.uncube.launcher3%252Ficon%252Fnow.png%26w%3D256%26q%3D80&w=1440&q=70" alt="App"></div>
+                    <div class="button" onclick='window.open("https://testdrive-int2.now.gg/apps/uncube/7074/now.html","_blank")'>Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 2 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN App Launcher V2</div>
+                <div class="content">
+                    <div class="image"><img src="https://cdn.now.gg/assets-opt/_next/image?url=https%3A%2F%2Fcdn.now.gg%2Fassets-opt%2F_next%2Fimage%3Furl%3Dhttps%253A%252F%252Fcdn.now.gg%252Fapps-content%252Fcom.uncube.launcher3%252Ficon%252Fnow.png%26w%3D256%26q%3D80&w=1440&q=70" alt="App"></div>
+                    <div class="button" onclick='window.open("https://now.gg/apps/uncube/10005/now.html","_blank")'>Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 3 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN Nhiều Game</div>
+                <div class="content">
+                    <div class="image"><img src="https://cdn.now.gg/assets-opt/_next/image?url=https%3A%2F%2Fcdn.now.gg%2Fassets-opt%2F_next%2Fimage%3Furl%3Dhttps%253A%252F%252Fcdn.now.gg%252Fapps-content%252Fcom.aptoide.partners.nowgg.store%252Ficon%252Faptoide.png%26w%3D256%26q%3D80&w=1440&q=70" alt="Aptoide"></div>
+                    <div class="button" onclick="window.open('https://now.gg/apps/aptoide/5874/aptoide.html', '_blank')">Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 4 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN Roblox</div>
+                <div class="content">
+                    <div class="image"><img src="https://upload.wikimedia.org/wikipedia/commons/1/1e/Roblox_Logo_2025.png" alt="Roblox"></div>
+                    <div class="button" onclick="window.open('https://now.gg/apps/mini-games-rb/19907/upd-fish-it.html', '_blank')">Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 5 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN Blox Fruit</div>
+                <div class="content">
+                    <div class="image"><img src="https://cdn.now.gg/assets-opt/_next/image?url=https%3A%2F%2Fcdn.now.gg%2Fassets-opt%2F_next%2Fimage%3Furl%3Dhttps%253A%252F%252Fcdn.now.gg%252Fapps-content%252F19901%252Ficon%252Fb.png%26w%3D256%26q%3D80&w=1440&q=70" alt="Blox Fruit"></div>
+                    <div class="button" onclick='window.open("https://now.gg/apps/Blox-fruit/19901/Blox-fruit.html","_blank")'>Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 6 -->
+            <div class="screen">
+                <div class="header">Thiết Bị Pro Roblox VN</div>
+                <div class="content">
+                    <div class="image"><img src="https://res.ldrescdn.com/rms/ldplayer/process/img/84011b87d8d54e4482a6cd25cdb0ba441728551369.jpg?image_process=format,webp&x-oss-process=image%2Fresize%2Cw_384%2Fquality%2CQ_75" alt="Roblox VN"></div>
+                    <div class="button" onclick='window.open("https://www.easyfun.gg/cloud-games/roblox-vng-cloud-online.html","_blank")'>Vào Chơi</div>
+                </div>
+            </div>
+
+            <!-- CARD 7 -->
+            <div class="screen">
+                <div class="header">Thiết Bị Pro Genshin</div>
+                <div class="content">
+                    <div class="image"><img src="https://res.ldrescdn.com/rms/ldplayer/process/img/4dfe62cd7c3f4b2dafe7642693b652de1728456516.png?image_process=format,webp&x-oss-process=image%2Fresize%2Cw_384%2Fquality%2CQ_75" alt="Genshin Impact"></div>
+                    <div class="button" onclick='window.open("https://www.easyfun.gg/cloud-games/genshin-impact.html","_blank")'>Vào Chơi</div>
+                </div>
+            </div>
+            
+            <!-- CARD 8 -->
+            <div class="screen">
+                <div class="header">Thiết Bị VPN Free Fire</div>
+                <div class="content">
+                    <div class="image"><img src="https://i.imgur.com/lOSkJOQ.jpeg" alt="Free Fire"></div>
+                    <div class="button" onclick="window.open('https://now.gg/apps/garena-international-i/1398/free-fire.html', '_blank')">Vào Chơi</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nút qua phải -->
+        <button class="nav-btn right" onclick="scrollRight()">❯</button>
+    </div>
+
+    <!-- ===== SCRIPT ===== -->
+    <script>
+        // 1. Hiển thị thông báo khi load trang
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('hologram-overlay').classList.add('visible');
+            highlightCenterScreen(); // Kích hoạt hiệu ứng phóng to cho card ở giữa
+        });
+
+        // 2. Ẩn thông báo
+        function hideNotification() {
+            document.getElementById('hologram-overlay').classList.remove('visible');
+        }
+
+        // 3. Logic cuộn tự động khi bấm nút
+        const container = document.getElementById('gameContainer');
+        
+        function scrollLeft() {
+            // Lấy kích thước 1 card + khoảng cách (gap) để cuộn chính xác
+            const card = container.querySelector('.screen');
+            const gap = 40; 
+            const scrollAmount = card.offsetWidth + gap;
+            container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        }
+
+        function scrollRight() {
+            const card = container.querySelector('.screen');
+            const gap = 40;
+            const scrollAmount = card.offsetWidth + gap;
+            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+
+        // 4. Logic phóng to Card ở giữa màn hình (Scroll Snap Active Class)
+        const screens = document.querySelectorAll('.screen');
+
+        function highlightCenterScreen() {
+            const containerRect = container.getBoundingClientRect();
+            const containerCenter = containerRect.left + containerRect.width / 2;
+
+            screens.forEach(screen => {
+                const rect = screen.getBoundingClientRect();
+                const screenCenter = rect.left + rect.width / 2;
+                const distance = Math.abs(screenCenter - containerCenter);
+
+                // Nếu tâm của card gần tâm màn hình
+                if (distance < rect.width / 2) {
+                    screen.classList.add('active');
+                } else {
+                    screen.classList.remove('active');
+                }
+            });
+        }
+
+        // Lắng nghe sự kiện cuộn để update hiệu ứng
+        container.addEventListener('scroll', () => {
+            requestAnimationFrame(highlightCenterScreen);
+        });
+    </script>
+</body>
+</html>
